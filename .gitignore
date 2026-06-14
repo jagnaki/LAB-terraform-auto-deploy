@@ -1,0 +1,6 @@
+infra/terraform.tfstate
+infra/terraform.tfstate.backup
+infra/.terraform/
+infra/terraform.tfvars
+__pycache__/
+.pytest_cache/

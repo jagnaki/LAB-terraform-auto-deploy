@@ -1,0 +1,46 @@
+name: CI — Build, Test, Push, Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  ci-cd:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ustaw Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Zainstaluj zależności
+        run: pip install -r requirements.txt
+
+      - name: Uruchom testy
+        run: cd app && pytest
+
+      - name: Zaloguj się do ACR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.ACR_LOGIN_SERVER }}
+          username: ${{ secrets.AZURE_CLIENT_ID }}
+          password: ${{ secrets.AZURE_CLIENT_SECRET }}
+
+      - name: Zbuduj i wypchnij obraz
+        run: |
+          IMAGE=${{ secrets.ACR_LOGIN_SERVER }}/app:${{ github.sha }}
+          docker build -t $IMAGE .
+          docker push $IMAGE
+
+      - name: Ustaw kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > ~/.kube/config
+
+      - name: Zaktualizuj obraz w AKS
+        run: |
+          kubectl set image deployment/app \
+            app=${{ secrets.ACR_LOGIN_SERVER }}/app:${{ github.sha }}
+          kubectl rollout status deployment/app --timeout=120s
