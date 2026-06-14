@@ -1,134 +1,87 @@
-# Create README.md file with the provided content
+# LAB-04 — Infrastruktura jako kod (IaC) i Automatyczny Deployment
 
-content = """# Kalkulator API — DevOps LAB-04
+## Cel zadania
+Celem projektu jest wdrożenie automatycznego procesu CI/CD przy użyciu **Terraform** oraz **GitHub Actions**. Infrastruktura (ACR oraz AKS) jest zarządzana za pomocą kodu, a każdy `git push` na gałąź `main` automatycznie buduje aplikację, testuje ją, wypycha obraz do rejestru i aktualizuje serwis w klastrze Kubernetes.
 
-Rozszerzenie projektu **LAB-03** o podejście *Infrastructure as Code* (Terraform) oraz automatyczny pipeline CI/CD wdrażający aplikację do **Azure Kubernetes Service (AKS)** po każdym commicie.
+## Architektura
+1. **Terraform**: Automatyczne provisionowanie grupy zasobów, ACR i AKS.
+2. **GitHub Actions**: Pipeline realizujący pełny cykl życia aplikacji (Build → Test → Push → Rollout).
+3. **AKS**: Klaster Kubernetes przyjmujący zaktualizowany obraz kontenera.
 
----
-
-## 📌 Opis projektu
-
-Aplikacja udostępnia REST API kalkulatora i demonstruje pełny cykl DevOps:
-
-- budowanie aplikacji
-- testowanie
-- konteneryzacja (Docker)
-- publikacja do rejestru (ACR)
-- deployment do Kubernetes (AKS)
-- automatyzacja (GitHub Actions)
-
----
-
-## 🚀 Funkcjonalność API
-
-| Endpoint   | Metoda | Opis |
-|------------|--------|------|
-| /health  | GET    | Sprawdzenie stanu aplikacji |
-| /dodaj   | POST   | Dodawanie dwóch liczb |
-| /odejmij | POST   | Odejmowanie dwóch liczb |
-| /mnoz    | POST   | Mnożenie dwóch liczb |
-| /dziel   | POST   | Dzielenie (z obsługą dzielenia przez zero) |
-
----
-
-## 🏗️ Architektura
-
-GitHub Repository
-        │
-        │ (CI/CD Pipeline)
-        ▼
-Azure Container Registry (ACR)
-        │
-        ▼
-Azure Kubernetes Service (AKS)
-        ▲
-        │
-Terraform (Infrastructure as Code)
-
----
-
-## 📁 Struktura projektu
-
+## Struktura projektu
+```text
 .
-├── .github/
-│   └── workflows/
-│       └── ci.yml
-├── infra/
+├── .github/workflows/ci.yml  # Pipeline CI/CD
+├── infra/                    # Kod Terraform
 │   ├── main.tf
 │   ├── variables.tf
 │   └── outputs.tf
-├── k8s/
+├── k8s/                      # Manifesty Kubernetes
 │   └── deployment.yaml
-├── app/
-│   ├── main.py
-│   └── test_main.py
-├── Dockerfile
-├── requirements.txt
-└── README.md
+├── app/                      # Kod aplikacji (FastAPI)
+└── Dockerfile
+```
 
----
+## Instrukcja uruchomienia
 
-## 🔧 Wymagania
+### 1. Provisionowanie infrastruktury (Terraform)
+Wejdź do folderu `infra` i uruchom:
 
-- Python 3.10+
-- Docker
-- Terraform >= 1.0
-- Azure CLI
-- kubectl
-- Konto Azure
-
----
-
-## ☁️ Infrastruktura (Terraform)
-
-cd infra
+```bash
 terraform init
-terraform apply -var="acr_name=acrlab04<suffix>"
+terraform apply -var="acr_name=<twoja_unikalna_nazwa_acr>"
+```
 
----
+### 2. Przygotowanie sekretów GitHub
+Aby pipeline miał dostęp do zasobów, dodaj poniższe sekrety w:
+**GitHub Settings → Secrets and variables → Actions**
 
-## ☸️ Kubernetes — pierwsze wdrożenie
+| Sekret | Wartość |
+|--------|----------|
+| AZURE_CLIENT_ID | `terraform output acr_admin_username` |
+| AZURE_CLIENT_SECRET | `terraform output -raw acr_admin_password` |
+| AZURE_TENANT_ID | `az account show --query tenantId -o tsv` |
+| AZURE_SUBSCRIPTION_ID | `az account show --query id -o tsv` |
+| ACR_LOGIN_SERVER | `<twoja_nazwa_acr>.azurecr.io` |
+| KUBE_CONFIG | `az aks get-credentials --resource-group rg-lab04 --name aks-lab04 --file - \| base64 -w 0` |
 
+### 3. Pierwsze wdrożenie aplikacji
+
+```bash
+# Pobranie poświadczeń lokalnie
 az aks get-credentials --resource-group rg-lab04 --name aks-lab04
+
+# Zastosowanie manifestów
 kubectl apply -f k8s/deployment.yaml
+```
 
----
+## Weryfikacja działania
 
-## 🔁 CI/CD (GitHub Actions)
+Sprawdź pody:
+```bash
+kubectl get pods
+```
 
-Pipeline uruchamia się przy każdym push na `main`.
+Pobierz adres serwisu:
+```bash
+kubectl get svc app-svc
+```
 
----
-
-## 💻 Uruchomienie lokalne
-
-pip install -r requirements.txt
-cd app
-uvicorn main:app --host 0.0.0.0 --port 8080
-
----
-
-## 🧪 Testy
-
-pip install -r requirements.txt
-cd app
-pytest
-
----
-
-## 📡 Przykłady użycia
-
+Test API:
+```bash
 curl http://<EXTERNAL-IP>/health
+```
 
----
+## Test automatycznego deployu
+Wprowadź zmianę w kodzie aplikacji i wykonaj:
 
-## 📌 Uwagi
+```bash
+git add .
+git commit -m "Test auto-deploy"
+git push origin main
+```
 
-Projekt pokazuje kompletny pipeline DevOps.
-"""
+Pipeline automatycznie zaktualizuje deployment w AKS.
 
-file_path = "/mnt/data/README.md"
-with open(file_path, "w", encoding="utf-8") as f:
-    f.write(content)
-
-file_path
+## Uwaga
+Projekt korzysta z lokalnego pliku `terraform.tfstate`, który powinien być dodany do `.gitignore`.
