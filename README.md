@@ -29,7 +29,8 @@ Wejdź do folderu `infra` i uruchom:
 
 ```bash
 terraform init
-terraform apply -var="acr_name=<twoja_unikalna_nazwa_acr>"
+openssl rand -hex 4 #losowy ciąg znaków
+terraform apply -var="acr_name=acr<losowy ciąg znaków>"
 ```
 
 ### 2. Przygotowanie sekretów GitHub
