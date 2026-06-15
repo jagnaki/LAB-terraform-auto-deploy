@@ -416,7 +416,7 @@ az aks get-credentials --resource-group rg-lab04 --name aks-lab04
 kubectl apply -f k8s/deployment.yaml
 
 # 3. Podmień obraz (plik YAML zawiera placeholder)
-kubectl set image deployment/app app=acrf9d631a3.azurecr.io/app:manual
+kubectl set image deployment/app app=<nazwa_acr>.azurecr.io/app:manual
 
 # 4. Sprawdź czy pody działają
 kubectl get pods -w
