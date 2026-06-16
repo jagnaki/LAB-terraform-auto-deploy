@@ -9,7 +9,7 @@ class Operacja(BaseModel):
 
 @app.get("/health")
 def health():
-    return {"status": "healthy"}
+    return {"status": "healthy v2"}
 
 @app.post("/dodaj")
 def dodaj(op: Operacja):
