@@ -16,6 +16,7 @@
 - [4. Uruchomienie aplikacji w klastrze](#4-uruchomienie-aplikacji-lokalnie-w-klastrze)
 - [5. Weryfikacja działania](#5-weryfikacja-działania)
 - [6. Automatyczny deployment CI/CD](#6-automatyczny-deployment-cicd)
+  - [6.1 Demonstracja automatycznego deploymentu](#61-demonstracja-automatycznego-deploymentu)
 - [7. Zatrzymanie aplikacji](#7-zatrzymanie-aplikacji-po-testach)
 - [8. Ponowne uruchomienie](#8-ponowne-uruchomienie-aplikacji)
 - [9. Czego NIE robić](#9-ważne--czego-nie-robić)
@@ -381,6 +382,80 @@ Pipeline GitHub Actions uruchomi kolejno:
 | 3 | **Docker Push** | Budowanie i wysyłanie obrazu do ACR |
 | 4 | **Deploy** | Aktualizacja deployment w AKS (`kubectl rollout`) |
 
+---
+
+### 6.1 Demonstracja automatycznego deploymentu
+ 
+Aby udowodnić, że pipeline działa automatycznie (bez ręcznego deploymentu), wykonaj poniższe kroki:
+ 
+#### 1. Upewnij się, że aplikacja działa
+ 
+```bash
+kubectl get svc
+curl http://<EXTERNAL-IP>/health
+```
+ 
+Powinieneś otrzymać odpowiedź:
+ 
+```json
+{"status": "ok"}
+```
+ 
+#### 2. Wprowadź zmianę w aplikacji
+ 
+W pliku aplikacji (np. FastAPI) zmień endpoint `/health`, np.:
+ 
+```python
+return {"status": "ok v2"}
+```
+ 
+#### 3. Wypchnij zmiany do repozytorium
+ 
+```bash
+git add .
+git commit -m "update health endpoint"
+git push origin main
+```
+ 
+#### 4. Obserwuj pipeline GitHub Actions
+ 
+Przejdź do zakładki **Actions** w repozytorium GitHub. Pipeline automatycznie wykona:
+ 
+- build aplikacji
+- testy
+- build obrazu Docker
+- push do Azure Container Registry (ACR)
+- deployment do Azure Kubernetes Service (AKS)
+#### 5. Zweryfikuj aktualizację aplikacji
+ 
+Po zakończeniu pipeline:
+ 
+```bash
+kubectl get pods
+```
+ 
+Następnie:
+ 
+```bash
+curl http://<EXTERNAL-IP>/health
+```
+ 
+Powinieneś zobaczyć zaktualizowaną odpowiedź:
+ 
+```json
+{"status": "ok v2"}
+```
+ 
+#### ✅ Wniosek
+ 
+Zmiana została wdrożona automatycznie bez użycia komend typu:
+ 
+- `kubectl apply`
+- `kubectl set image`
+Oznacza to, że pipeline CI/CD działa poprawnie i realizuje pełny proces:
+ 
+**build → test → push → deploy**
+ 
 ---
 
 ## 7. Zatrzymanie aplikacji po testach
